@@ -50,6 +50,6 @@ public class Bot {
 
     System.out.println(path.get(1));
 
-    return new SporeMoveToAction(spore.id(), dest_pos);    
+    return new SporeMoveAction(spore.id(), dest_pos);    
   }
 }
