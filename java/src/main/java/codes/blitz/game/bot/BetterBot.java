@@ -10,6 +10,7 @@ public class BetterBot {
     Tile [][] tiles;
     List<Tile> freeNutrimentsTiles= new ArrayList<>();
     List<Tile> ourPositionTiles= new ArrayList<>();
+    int spawnerss=0;
 
     List<Queue<Tile>>  conqueringPaths = new ArrayList<>();
 
@@ -24,7 +25,6 @@ public class BetterBot {
         List<Action> actions = new ArrayList<>();
         int[][] nutrimentsGrid = gameMessage.world().map().nutrientGrid();
         tiles = new Tile[nutrimentsGrid[0].length][nutrimentsGrid.length];
-
 
         // CREATION DE LA MAP A UTILISER
         for (int i = 0; i < nutrimentsGrid[0].length; i++) {
@@ -46,6 +46,9 @@ public class BetterBot {
         List<Spawner> spawners = gameMessage.world().spawners();
         for (Spawner spawner : spawners) {
             tiles[spawner.position().x()][spawner.position().y()].setSpawner(true);
+            if (tiles[spawner.position().x()][spawner.position().y()].getControllingTeam().equals(gameMessage.yourTeamId())) {
+                spawnerss++;
+            }
         }
 
         List<Spore> spores = gameMessage.world().spores();
@@ -53,6 +56,11 @@ public class BetterBot {
             tiles[spore.position().x()][spore.position().y()].setSporeId(spore.id());
         }
         // FIN DE CREATION DE LA MAP A UTILISER
+
+
+        if (spawnerss==0){
+            actions.add(new SporeCreateSpawnerAction(ourPositionTiles.get(0).getSporeId()));
+        }
 
         if (freeNutrimentsTiles.size()>0) {
             // FINDER MODE
