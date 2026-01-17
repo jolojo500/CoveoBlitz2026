@@ -15,6 +15,40 @@ public class Bot {
   /*
    * Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
    */
+
+
+  private int manhattanDistance(Position a, Position b) {
+    return Math.abs(a.x() - b.x()) + Math.abs(a.y() - b.y()); //TODO perhaps replace using pathfinding or wtv later
+  }
+
+  private Position getNextPositionTowards(Position from, Position to) {
+    // Se déplacer d'une case vers la cible (cardinale seulement)
+    int dx = Integer.compare(to.x(), from.x()); //TODO perhaps replace using pathfinding or wtv later
+    int dy = Integer.compare(to.y(), from.y());
+
+    // Prioriser x ou y (tu peux ajuster la stratégie)
+    if (dx != 0) {
+      return new Position(from.x() + dx, from.y());
+    } else if (dy != 0) {
+      return new Position(from.x(), from.y() + dy);
+    }
+
+    return from; // Déjà sur la cible
+  }
+
+  private int calculateBiomassLost(Position from, Position to, TeamInfo myTeam, TeamGameState gameMessage) {
+    // Vérifier si la case de destination est déjà claimée par nous
+    String owner = gameMessage.world().ownershipGrid()[to.y()][to.x()];
+
+    // Si la case appartient déjà à notre équipe, pas de perte
+    if (owner != null && owner.equals(myTeam.teamId())) {
+      return 0;
+    }
+
+    // Sinon, on perd 1 biomasse (on laisse une trace)
+    return 1;
+  }
+
   public List<Action> getActions(TeamGameState gameMessage) {
     List<Action> actions = new ArrayList<>();
 
@@ -61,6 +95,45 @@ public class Bot {
 
     return enemies;
   }
+
+  public List<Action> charge(List<TeamInfo> ennemies, TeamInfo myTeam, TeamGameState gameMessage){
+    //attaque spore, quelle spore est nearest et attackable post deplacemenet
+    List<Action> actions = new ArrayList<>();
+    //Position cible;  si je return, func name est charge tho so
+
+    for (Spore mySpore : myTeam.spores()) {
+      // Une spore avec 1 biomasse ne peut pas bouger
+      if (mySpore.biomass() <= 1) {
+        continue;
+      }
+
+      Spore nearestEnemy = null;
+      int minDistance = Integer.MAX_VALUE;
+
+      for (TeamInfo ennemy : ennemies) {
+        for (Spore enemySpore : ennemy.spores()) {
+          int distance = manhattanDistance(mySpore.position(), enemySpore.position());
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestEnemy = enemySpore;
+          }
+        }
+      }
+
+      if(nearestEnemy != null){
+        Position nextPos = getNextPositionTowards(mySpore.position(), nearestEnemy.position());
+        int biomassLost = calculateBiomassLost(mySpore.position(), nextPos, myTeam,gameMessage);
+        int myBiomassAfterMove= mySpore.biomass() - biomassLost;
+
+        if(myBiomassAfterMove > nearestEnemy.biomass()){
+          actions.add(new SporeMoveToAction(mySpore.id(), nextPos));
+        }
+      }
+    }
+    return actions;
+  }
+
 
 
 
