@@ -81,11 +81,9 @@ public class Bot {
                   random.nextInt(gameMessage.world().map().height()))));
     */
       List<Action> chargeActions = charge(blabla, myTeam, gameMessage);
+      actions.addAll(chargeActions);
 
-      if (!chargeActions.isEmpty()) {
-        // On peut attaquer!
-        actions.addAll(chargeActions);
-      }
+      // 2. Récupérer quelles spores ont déjà une action
       List<String> sporesWithActions = new ArrayList<>();
       for (Action action : actions) {
         if (action instanceof SporeMoveToAction) {
@@ -93,7 +91,22 @@ public class Bot {
         }
       }
 
-      // Faire bouger les autres spores random
+      // 3. SEULEMENT si on a PEU de nutrients (<100), merger les spores faibles
+      if (myTeam.nutrients() < 100) {
+        mergeWeakSpores(myTeam, gameMessage, actions, sporesWithActions);
+
+        // Mettre à jour la liste après merge
+        for (Action action : actions) {
+          if (action instanceof SporeMoveToAction) {
+            String id = ((SporeMoveToAction) action).sporeId();
+            if (!sporesWithActions.contains(id)) {
+              sporesWithActions.add(id);
+            }
+          }
+        }
+      }
+
+      // 4. Les autres bougent random
       for (Spore spore : myTeam.spores()) {
         if (!sporesWithActions.contains(spore.id()) && spore.biomass() > 1) {
           actions.add(
@@ -183,26 +196,74 @@ public class Bot {
             }
           }
         }
+        if(weakestEnemyBiomass != Integer.MAX_VALUE) {
+          int availableNutrients = myTeam.nutrients();
+          int targetBiomass = weakestEnemyBiomass + 5;//placeholder val
 
-        int availableNutrients = myTeam.nutrients();
+          if(availableNutrients > targetBiomass *2) { //another placeholder val
+            targetBiomass = Math.min(availableNutrients/2, weakestEnemyBiomass + 15); //on utilise plus de nutrients sin on est riche type shit pour pas waste endgame
+          }
 
-        int targetBiomass = weakestEnemyBiomass + 5; //placeholder val
-
-        if(availableNutrients > targetBiomass *2) { //another placeholder val
-          targetBiomass = Math.min(availableNutrients/2, weakestEnemyBiomass + 15); //on utilise plus de nutrients sin on est riche type shit pour pas waste endgame
-        }
-
-        if(availableNutrients >= targetBiomass){
-          actions.add(new SpawnerProduceSporeAction(
-                  myTeam.spawners().getFirst().id(), //again placeholder, could be better byu distance search
-                  targetBiomass
-          ));
+          if(availableNutrients >= targetBiomass){
+            actions.add(new SpawnerProduceSporeAction(
+                    myTeam.spawners().getFirst().id(), //again placeholder, could be better byu distance search
+                    targetBiomass
+            ));
+          }
         }
       }
 
     return actions;
   }
 
+  private void mergeWeakSpores(TeamInfo myTeam, TeamGameState gameMessage,
+                               List<Action> actions, List<String> sporesAttacking) {
+    // Trouver la plus grosse spore ou une spore qui attaque
+    Spore targetSpore = null;
+    int maxBiomass = 0;
+
+    // Prioriser les spores qui attaquent
+    for (String attackingId : sporesAttacking) {
+      for (Spore spore : myTeam.spores()) {
+        if (spore.id().equals(attackingId) && spore.biomass() > maxBiomass) {
+          maxBiomass = spore.biomass();
+          targetSpore = spore;
+        }
+      }
+    }
+
+    // Sinon, prendre la plus grosse spore
+    if (targetSpore == null) {
+      for (Spore spore : myTeam.spores()) {
+        if (spore.biomass() > maxBiomass) {
+          maxBiomass = spore.biomass();
+          targetSpore = spore;
+        }
+      }
+    }
+
+    if (targetSpore == null) return;
+
+    // Les spores faibles (< 50% de la plus grosse) se dirigent vers elle
+    int threshold = maxBiomass / 2;
+
+    for (Spore weakSpore : myTeam.spores()) {
+      // Skip si déjà en action ou si c'est la target
+      if (sporesAttacking.contains(weakSpore.id()) ||
+              weakSpore.id().equals(targetSpore.id()) ||
+              weakSpore.biomass() <= 1) {
+        continue;
+      }
+
+      // Si la spore est faible, elle rejoint la plus grosse
+      if (weakSpore.biomass() < threshold) {
+        Position nextPos = getNextPositionTowards(weakSpore.position(), targetSpore.position());
+        actions.add(new SporeMoveToAction(weakSpore.id(), nextPos));
+        System.out.println("Spore " + weakSpore.id() + " (biomass=" + weakSpore.biomass() +
+                ") merging towards " + targetSpore.id() + " (biomass=" + targetSpore.biomass() + ")");
+      }
+    }
+  }
 
 
 
