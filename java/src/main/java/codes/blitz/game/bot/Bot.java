@@ -49,14 +49,17 @@ public class Bot {
     return 1;
   }
 
+
+
+
   public List<Action> getActions(TeamGameState gameMessage) {
-    int[][] nutri = gameMessage.world().map().nutrientGrid();
+    /*int[][] nutri = gameMessage.world().map().nutrientGrid();
     for (int i = 0; i < nutri[0].length; i++) {
       for (int j = 0; j < nutri[1].length; j++) {
         System.out.print(nutri[i][j]);
       }
       System.out.println();
-    }
+    }*/
 
     List<Action> actions = new ArrayList<>();
 
@@ -71,13 +74,29 @@ public class Bot {
     } else if (myTeam.spores().isEmpty()) {
       actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), 20));
     } else {
-      actions.add(
+      /*actions.add(
           new SporeMoveToAction(
               myTeam.spores().getFirst().id(),
               new Position(
                   random.nextInt(gameMessage.world().map().width()),
                   random.nextInt(gameMessage.world().map().height()))));
+    */
+      List<Action> chargeActions = charge(blabla, myTeam, gameMessage);
+
+      if (!chargeActions.isEmpty()) {
+        // On peut attaquer!
+        actions.addAll(chargeActions);
+      } else {
+        // Fallback au random
+        actions.add(
+                new SporeMoveToAction(
+                        myTeam.spores().getFirst().id(),
+                        new Position(
+                                random.nextInt(gameMessage.world().map().width()),
+                                random.nextInt(gameMessage.world().map().height()))));
+      }
     }
+
 
     // You can clearly do better than the random actions above. Have fun!!
     return actions;
@@ -109,6 +128,7 @@ public class Bot {
     List<Action> actions = new ArrayList<>();
     //Position cible;  si je return, func name est charge tho so
 
+    boolean canAttack= false;
     for (Spore mySpore : myTeam.spores()) {
       // Une spore avec 1 biomasse ne peut pas bouger
       if (mySpore.biomass() <= 1) {
@@ -136,6 +156,33 @@ public class Bot {
 
         if(myBiomassAfterMove > nearestEnemy.biomass()){
           actions.add(new SporeMoveToAction(mySpore.id(), nextPos));
+          canAttack = true;
+        }
+      }
+
+      int weakestEnemyBiomass = Integer.MAX_VALUE;
+      for (TeamInfo ennemy : ennemies) {
+        for (Spore enemySpore : ennemy.spores()) {
+          if (enemySpore.biomass() < weakestEnemyBiomass) {
+            weakestEnemyBiomass = enemySpore.biomass();
+          }
+        }
+      }
+
+      if(!canAttack && !myTeam.spawners().isEmpty() && weakestEnemyBiomass!=Integer.MAX_VALUE){
+        int availableNutrients = myTeam.nutrients();
+
+        int targetBiomass = weakestEnemyBiomass + 5; //placeholder val
+
+        if(availableNutrients > targetBiomass *2) { //another placeholder val
+          targetBiomass = Math.min(availableNutrients/2, weakestEnemyBiomass + 15); //on utilise plus de nutrients sin on est riche type shit pour pas waste endgame
+        }
+
+        if(availableNutrients >= targetBiomass){
+          actions.add(new SpawnerProduceSporeAction(
+                  myTeam.spawners().getFirst().id(), //again placeholder, could be better byu distance search
+                  targetBiomass
+          ));
         }
       }
     }
