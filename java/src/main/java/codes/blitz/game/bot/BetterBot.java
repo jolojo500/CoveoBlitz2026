@@ -29,17 +29,17 @@ public class BetterBot {
         // CREATION DE LA MAP A UTILISER
         for (int i = 0; i < nutrimentsGrid[0].length; i++) {
             for (int j = 0; j < nutrimentsGrid[1].length; j++) {
-                if (nutrimentsGrid[i][j] != 0 ) {
-                    Tile t =new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],"",
-                            gameMessage.world().ownershipGrid()[i][j],false,new Position(i,j));
-                    if (t.getNutrients()>0 && (t.getControllingTeam().equals("") || t.getControllingTeam().equals("NEUTRAL"))) {
+
+                    Tile t = new Tile(nutrimentsGrid[i][j], gameMessage.world().biomassGrid()[i][j], "",
+                            gameMessage.world().ownershipGrid()[i][j], false, new Position(i, j));
+                    if (t.getNutrients() > 0 && (t.getControllingTeam().equals("") || t.getControllingTeam().equals("NEUTRAL"))) {
                         freeNutrimentsTiles.add(t);
                     }
-                    if (t.getControllingTeam().equals(gameMessage.yourTeamId()) && t.getBiomassValue()>1) {
+                    if (t.getControllingTeam().equals(gameMessage.yourTeamId()) && t.getBiomassValue() > 1) {
                         ourPositionTiles.add(t);
                     }
                     tiles[i][j] = t;
-                }
+
             }
         }
 
@@ -57,14 +57,12 @@ public class BetterBot {
         if (freeNutrimentsTiles.size()>0) {
             // FINDER MODE
             Tile t = getClosestNutriTile(gameMessage.yourTeamId());
-            moveAllBiomassTo(t, gameMessage.yourTeamId());
+            actions.addAll(moveAllBiomassTo(t, gameMessage.yourTeamId()));
         } else {
            // ATTACK MODE
 
 
         }
-
-        //-/ ////////////// continuer apres cette ligne
 
 
         // -/////////////////////////////////////////////////////////// continuer avant cette ligne
@@ -87,9 +85,6 @@ public class BetterBot {
         Queue<Tile> theChosenOne = paths.get(0).path();
         Tile t = theChosenOne.poll();
         Tile tPlusUn = theChosenOne.poll();
-        while (tPlusUn != null) {
-            tPlusUn = theChosenOne.poll();
-        }
         return tPlusUn;
     }
     public Action goToBorder(Tile start, Tile end, String teamId) {
@@ -119,18 +114,29 @@ public class BetterBot {
         for (int i = 0; i < ourPositionTiles.size(); i++) {
             Path pa = TilePathfinder.findShortestPath(tiles, ourPositionTiles.get(i),tile,teamId);
             for (int j = 0 ; j < pa.path().size(); j++) {
-                Tile t = pa.path().remove();
+                Tile t = pa.path().poll();
                 Tile tPlusUn = pa.path().peek();
-                Position p=new Position(1,0);
-                if (t.getPosition().x()+1==tPlusUn.getPosition().x()) {
-                    p = new Position(1,0);
+                Position p=new Position(0,0);
+                if (t.getPosition().x()+1<tiles.length){
+                    if (t.getPosition().x()+1==tPlusUn.getPosition().x()) {
+                        p = new Position(1,0);
+                    }
                 }
-                else if (t.getPosition().x()-1==tPlusUn.getPosition().x()) {
-                    p = new Position(-1,0);
-                } else if (t.getPosition().y()+1==tPlusUn.getPosition().y()) {
-                    p = new Position(0,1);
-                } else if (t.getPosition().y()-1==tPlusUn.getPosition().y()) {
-                    p = new Position(0,-1);
+                if (t.getPosition().x()>0){
+                    if (t.getPosition().x()-1==tPlusUn.getPosition().x()) {
+                     p = new Position(-1,0);
+                    }
+                }
+                if (t.getPosition().y()+1<tiles.length){
+                    if (t.getPosition().y()+1==tPlusUn.getPosition().y()) {
+                        p = new Position(0,1);
+
+                    }
+                }
+                if (t.getPosition().y()>0){
+                    if (t.getPosition().y()-1==tPlusUn.getPosition().y()) {
+                        p = new Position(0,-1);
+                    }
                 }
                 actions.add(new SporeMoveAction(t.getSporeId(),p));
             }

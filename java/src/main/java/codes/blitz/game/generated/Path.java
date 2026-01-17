@@ -17,7 +17,7 @@ public class Path {
         int cost = 0;
         for(Tile tile : path) {
             if(teamName != tile.getControllingTeam()) {
-                cost += 1 + tile.getBiomass();
+                cost += 1 + tile.getBiomassValue();
             }
         }
         return cost;
