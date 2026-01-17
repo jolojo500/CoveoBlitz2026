@@ -72,7 +72,7 @@ public class TilePathfinder {
 
                 // Calcul du coût du déplacement
                 int movementCost = neighborTile.getControllingTeam().equals(playerName) ?
-                    0 : neighborTile.getBiomass();
+                    0 : neighborTile.getBiomassValue();
 
                 // Calcul de g, h, f
                 int tentativeG = current.g + movementCost;

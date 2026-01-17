@@ -29,7 +29,6 @@ public class BetterBot {
         // CREATION DE LA MAP A UTILISER
         for (int i = 0; i < nutrimentsGrid[0].length; i++) {
             for (int j = 0; j < nutrimentsGrid[1].length; j++) {
-                if (nutrimentsGrid[i][j] != 0 ) {
                     Tile t =new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],"",
                             gameMessage.world().ownershipGrid()[i][j],false,new Position(i,j));
                     if (t.getNutrients()>0 && (t.getControllingTeam().equals("") || t.getControllingTeam().equals("NEUTRAL"))) {
@@ -39,7 +38,6 @@ public class BetterBot {
                         ourPositionTiles.add(t);
                     }
                     tiles[i][j] = t;
-                }
             }
         }
 
@@ -60,7 +58,8 @@ public class BetterBot {
             moveAllBiomassTo(t, gameMessage.yourTeamId());
         } else {
            // ATTACK MODE
-
+            Bot bot = new Bot();
+            actions.addAll(bot.getActions(gameMessage));
 
         }
 
