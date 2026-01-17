@@ -85,16 +85,27 @@ public class Bot {
       if (!chargeActions.isEmpty()) {
         // On peut attaquer!
         actions.addAll(chargeActions);
-      } else {
-        // Fallback au random
-        actions.add(
-                new SporeMoveToAction(
-                        myTeam.spores().getFirst().id(),
-                        new Position(
-                                random.nextInt(gameMessage.world().map().width()),
-                                random.nextInt(gameMessage.world().map().height()))));
+      }
+      List<String> sporesWithActions = new ArrayList<>();
+      for (Action action : actions) {
+        if (action instanceof SporeMoveToAction) {
+          sporesWithActions.add(((SporeMoveToAction) action).sporeId());
+        }
+      }
+
+      // Faire bouger les autres spores random
+      for (Spore spore : myTeam.spores()) {
+        if (!sporesWithActions.contains(spore.id()) && spore.biomass() > 1) {
+          actions.add(
+                  new SporeMoveToAction(
+                          spore.id(),
+                          new Position(
+                                  random.nextInt(gameMessage.world().map().width()),
+                                  random.nextInt(gameMessage.world().map().height()))));
+        }
       }
     }
+
 
 
     // You can clearly do better than the random actions above. Have fun!!
@@ -158,17 +169,21 @@ public class Bot {
           canAttack = true;
         }
       }
+    }
 
-      int weakestEnemyBiomass = Integer.MAX_VALUE;
-      for (TeamInfo ennemy : ennemies) {
-        for (Spore enemySpore : ennemy.spores()) {
-          if (enemySpore.biomass() < weakestEnemyBiomass) {
-            weakestEnemyBiomass = enemySpore.biomass();
+
+
+      if(!canAttack && !myTeam.spawners().isEmpty()){ //&& weakestEnemyBiomass!=Integer.MAX_VALUE){
+        //moved here because lol why would I need it to be elsewhere
+        int weakestEnemyBiomass = Integer.MAX_VALUE;
+        for (TeamInfo ennemy : ennemies) {
+          for (Spore enemySpore : ennemy.spores()) {
+            if (enemySpore.biomass() < weakestEnemyBiomass) {
+              weakestEnemyBiomass = enemySpore.biomass();
+            }
           }
         }
-      }
 
-      if(!canAttack && !myTeam.spawners().isEmpty() && weakestEnemyBiomass!=Integer.MAX_VALUE){
         int availableNutrients = myTeam.nutrients();
 
         int targetBiomass = weakestEnemyBiomass + 5; //placeholder val
@@ -184,7 +199,7 @@ public class Bot {
           ));
         }
       }
-    }
+
     return actions;
   }
 
