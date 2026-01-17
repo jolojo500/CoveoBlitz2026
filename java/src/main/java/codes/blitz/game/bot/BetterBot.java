@@ -56,7 +56,7 @@ public class BetterBot {
 
         if (freeNutrimentsTiles.size()>0) {
             // FINDER MODE
-            Tile t = getClosestNutriTile(gameMessage.yourTeamId());
+            Queue<Tile> t = getClosestNutriTile(gameMessage.yourTeamId());
             actions.addAll(moveAllBiomassTo(t, gameMessage.yourTeamId()));
         } else {
            // ATTACK MODE
@@ -69,7 +69,7 @@ public class BetterBot {
         return actions;
     }
 
-    public Tile getClosestNutriTile(String teamId) {
+    public Queue<Tile> getClosestNutriTile(String teamId) {
         List<Path> paths = new ArrayList<>();
         for (int i = 0; i < ourPositionTiles.size(); i++) {
             for (int j = i + 1; j < freeNutrimentsTiles.size(); j++) {
@@ -83,9 +83,8 @@ public class BetterBot {
             }
         });
         Queue<Tile> theChosenOne = paths.get(0).path();
-        Tile t = theChosenOne.poll();
-        Tile tPlusUn = theChosenOne.poll();
-        return tPlusUn;
+
+        return theChosenOne ;
     }
     public Action goToBorder(Tile start, Tile end, String teamId) {
         Path pa = TilePathfinder.findShortestPath(tiles, start, end, teamId);
@@ -108,14 +107,13 @@ public class BetterBot {
     public void findBorders(TeamGameState gameMessaage){
 
     }
-    public List<Action> moveAllBiomassTo(Tile tile, String teamId) {
+    public List<Action> moveAllBiomassTo(Queue<Tile> tile, String teamId) {
         List<Action> actions = new ArrayList<>();
-
         for (int i = 0; i < ourPositionTiles.size(); i++) {
-            Path pa = TilePathfinder.findShortestPath(tiles, ourPositionTiles.get(i),tile,teamId);
-            for (int j = 0 ; j < pa.path().size(); j++) {
-                Tile t = pa.path().poll();
-                Tile tPlusUn = pa.path().peek();
+            System.out.println("POSITION NUM " +i + " : "+ourPositionTiles.get(i).getPosition());
+            for (int j = 0 ; j < tile.size(); j++) {
+                Tile t = tile.poll();
+                Tile tPlusUn = tile.peek();
                 Position p=new Position(0,0);
                 if (t.getPosition().x()+1<tiles.length){
                     if (t.getPosition().x()+1==tPlusUn.getPosition().x()) {
