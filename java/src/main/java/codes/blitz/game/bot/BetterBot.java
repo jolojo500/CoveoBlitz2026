@@ -8,6 +8,9 @@ import java.util.Random;
 
 public class BetterBot {
     Random random = new Random();
+    // MAP A UTILISER
+    Tile [][] tiles;
+    List<Tile> freeNutrimentsTiles= new ArrayList<>();
 
     public BetterBot() {
         System.out.println("Initializing bot");
@@ -19,20 +22,29 @@ public class BetterBot {
     public List<Action> getActions(TeamGameState gameMessage) {
         List<Action> actions = new ArrayList<>();
         int[][] nutrimentsGrid = gameMessage.world().map().nutrientGrid();
-        Tile [][] tiles = new Tile[nutrimentsGrid[0].length][nutrimentsGrid.length];
+        tiles = new Tile[nutrimentsGrid[0].length][nutrimentsGrid.length];
 
+
+        // CREATION DE LA MAP A UTILISER
         for (int i = 0; i < nutrimentsGrid[0].length; i++) {
             for (int j = 0; j < nutrimentsGrid[1].length; j++) {
                 if (nutrimentsGrid[i][j] != 0 ) {
-                    tiles[i][j] = new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],
+                    Tile t =new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],
                             gameMessage.world().ownershipGrid()[i][j],false,new Position(i,j));
+                    if (t.getNutrients()>0 && (t.getControllingTeam().equals("") || t.getControllingTeam().equals("NEUTRAL"))) {
+                        freeNutrimentsTiles.add(t);
+                    }
+                    tiles[i][j] = t;
                 }
             }
         }
+
         List<Spawner> spawners = gameMessage.world().spawners();
         for (Spawner spawner : spawners) {
             tiles[spawner.position().x()][spawner.position().y()].setSpawner(true);
         }
+        // FIN DE CREATION DE LA MAP A UTILISER
+
         //-/ ////////////// continuer apres cette ligne
 
 
@@ -54,44 +66,4 @@ public class BetterBot {
         // -/////////////////////////////////////////////////////////// continuer avant cette ligne
         return actions;
     }
-    public class Tile {
-        int nutrients;
-        int biomass;
-        String controllingTeam;
-        boolean spawner;
-        Position position;
-
-        public Tile (int nutrients, int biomass, String controllingTeam, boolean spawner, Position position) {
-            this.nutrients = nutrients;
-            this.biomass = biomass;
-            this.controllingTeam = controllingTeam;
-            this.spawner = spawner;
-            this.position = position;
-        }
-
-        public Position getPosition() {
-            return position;
-        }
-
-        public int getNutrients() {
-            return nutrients;
-        }
-
-        public int getBiomass() {
-            return biomass;
-        }
-
-        public String getControllingTeam() {
-            return controllingTeam;
-        }
-
-        public boolean isSpawner() {
-            return spawner;
-        }
-
-        public void setSpawner(boolean spawner) {
-            this.spawner = spawner;
-        }
-    }
-
 }
