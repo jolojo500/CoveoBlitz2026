@@ -80,9 +80,9 @@ public class Bot {
         // CREATION DE LA MAP A UTILISER
         for (int i = 0; i < nutrimentsGrid[0].length; i++) {
             for (int j = 0; j < nutrimentsGrid[1].length; j++) {
-                    Tile t = new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],
-                            gameMessage.world().ownershipGrid()[i][j],false,new Position(i,j));
-                  tiles[i][j] = t;
+                    //Tile t = new Tile(nutrimentsGrid[i][j],gameMessage.world().biomassGrid()[i][j],
+                           // gameMessage.world().ownershipGrid()[i][j],false,new Position(i,j));
+                  //tiles[i][j] = t;
             }
         }
     

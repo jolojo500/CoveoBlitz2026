@@ -4,14 +4,16 @@ import java.util.Objects;
 
 public class Tile {
     int nutrients;
-    int biomass;
+    int biomassValue;
+    String SporeId;
     String controllingTeam;
     boolean spawner;
     Position position;
 
-    public Tile (int nutrients, int biomass, String controllingTeam, boolean spawner, Position position) {
+    public Tile (int nutrients, int biomassValue, String SporeId, String controllingTeam, boolean spawner, Position position) {
         this.nutrients = nutrients;
-        this.biomass = biomass;
+        this.biomassValue = biomassValue;
+        this.SporeId = SporeId;
         this.controllingTeam = controllingTeam;
         this.spawner = spawner;
         this.position = position;
@@ -21,12 +23,20 @@ public class Tile {
         return position;
     }
 
+    public String getSporeId() {
+        return SporeId;
+    }
+
+    public void setSporeId(String sporeId) {
+        SporeId = sporeId;
+    }
+
     public int getNutrients() {
         return nutrients;
     }
 
-    public int getBiomass() {
-        return biomass;
+    public int getBiomassValue() {
+        return biomassValue;
     }
 
     public String getControllingTeam() {
@@ -40,18 +50,6 @@ public class Tile {
     public void setSpawner(boolean spawner) {
         this.spawner = spawner;
     }
-
-     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Tile tile = (Tile) o;
-        return this.position.x() == tile.position.x() && this.position.y() == tile.position.y();
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(position.x(), position.y());
-    }
 }
+
 
