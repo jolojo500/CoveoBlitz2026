@@ -19,6 +19,11 @@ public class Bot {
     List<Action> actions = new ArrayList<>();
 
     TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+    List<TeamInfo> blabla = getEnnemies(gameMessage);
+
+    System.out.println("-------------------");
+    System.out.println(blabla);
+    System.out.println("------------------");
     if (myTeam.spawners().isEmpty()) {
       actions.add(new SporeCreateSpawnerAction(myTeam.spores().getFirst().id()));
     } else if (myTeam.spores().isEmpty()) {
@@ -35,4 +40,28 @@ public class Bot {
     // You can clearly do better than the random actions above. Have fun!!
     return actions;
   }
+
+
+
+  public List<TeamInfo> getEnnemies(TeamGameState gameMessage){
+    List<TeamInfo> enemies = new ArrayList<>();
+
+    for (String teamId : gameMessage.teamIds()) {
+      if (!teamId.equals(gameMessage.yourTeamId())) {
+        TeamInfo enemyTeam = gameMessage.world().teamInfos().get(teamId);
+
+        if (enemyTeam != null &&
+                !enemyTeam.spores().isEmpty() &&
+                enemyTeam.isAlive()) {
+          enemies.add(enemyTeam);
+        }
+
+      }
+    }
+
+    return enemies;
+  }
+
+
+
 }
