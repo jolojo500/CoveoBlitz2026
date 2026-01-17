@@ -19,11 +19,11 @@ public class Bot {
     int[][] nutri = gameMessage.world().map().nutrientGrid();
     for (int i = 0; i < nutri[0].length; i++) {
       for (int j = 0; j < nutri[1].length; j++) {
-        System.out.print(nutri[i][j]);
+        System.out.print(gameMessage.world().ownershipGrid()[i][j]);
       }
       System.out.println();
     }
-
+    System.out.println(    );
     List<Action> actions = new ArrayList<>();
 
     TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
