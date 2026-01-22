@@ -1,5 +1,6 @@
 package codes.blitz.game.websocket;
 
+import codes.blitz.game.bot.BetterBot;
 import codes.blitz.game.bot.Bot;
 import codes.blitz.game.generated.Action;
 import codes.blitz.game.generated.TeamGameState;
@@ -25,12 +26,12 @@ import java.util.concurrent.CountDownLatch;
 public class WebsocketClient {
   private static final String TOKEN_KEY = "TOKEN";
 
-  private final Bot bot;
+  private final BetterBot bot;
   private final CountDownLatch latch;
 
   public WebsocketClient(CountDownLatch latch) {
     this.latch = Objects.requireNonNull(latch);
-    this.bot = new Bot();
+    this.bot = new BetterBot();
   }
 
   @OnOpen

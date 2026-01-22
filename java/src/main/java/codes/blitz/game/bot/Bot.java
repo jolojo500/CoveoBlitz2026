@@ -55,7 +55,39 @@ public class Bot {
 
     return closest;
   }
+  private Position findBestNutrientTile(Position from, TeamInfo myTeam, TeamGameState gameMessage) {
+    Position bestPos = null;
+    double bestScore = -999999;
 
+    int[][] nutrientGrid = gameMessage.world().map().nutrientGrid();
+    String[][] ownershipGrid = gameMessage.world().ownershipGrid();
+
+    for (int y = 0; y < nutrientGrid.length; y++) {
+      for (int x = 0; x < nutrientGrid[y].length; x++) {
+        String owner = ownershipGrid[y][x];
+
+        // Skip si déjà à nous
+        if (owner != null && owner.equals(myTeam.teamId())) {
+          continue;
+        }
+
+        int nutrients = nutrientGrid[y][x];
+
+        // Accepter n'importe quelle tile PAS à nous (même avec 0 nutrients si besoin)
+        int distance = manhattanDistance(from, new Position(x, y));
+
+        // Score: prioriser les nutrients mais accepter toute tile non-owned
+        double score = (double) (nutrients + 1) / (distance + 1);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPos = new Position(x, y);
+        }
+      }
+    }
+
+    return bestPos;
+  }
 
 
   Random random = new Random();
@@ -136,7 +168,7 @@ public class Bot {
       List<Action> spawnerActions = manageSpawners(myTeam,gameMessage,blabla);
       actions.addAll(spawnerActions);
 
-      List<Action> chargeActions = charge(blabla, myTeam, gameMessage);
+      List<Action> chargeActions = charge(tiles, blabla, myTeam, gameMessage);
       actions.addAll(chargeActions);
 
       // 2. Récupérer quelles spores ont déjà une action
@@ -167,14 +199,45 @@ public class Bot {
       }
 
       // 4. Les autres bougent random
+
+      // 4. Les autres bougent random
       for (Spore spore : myTeam.spores()) {
         if (!sporesWithActions.contains(spore.id()) && spore.biomass() > 1) {
-          actions.add(
-                  new SporeMoveToAction(
-                          spore.id(),
-                          new Position(
-                                  random.nextInt(gameMessage.world().map().width()),
-                                  random.nextInt(gameMessage.world().map().height()))));
+
+          // Trouver la tile avec le plus de nutrients PAS à nous
+          Position bestPos = null;
+          int maxNutrients = -1;
+
+          int[][] nutrientGrid = gameMessage.world().map().nutrientGrid();
+          String[][] ownershipGrid = gameMessage.world().ownershipGrid();
+
+          for (int y = 0; y < nutrientGrid.length; y++) {
+            for (int x = 0; x < nutrientGrid[y].length; x++) {
+              // Skip si c'est à nous
+              String owner = ownershipGrid[y][x];
+              if (owner != null && owner.equals(myTeam.teamId())) {
+                continue;
+              }
+
+              if (nutrientGrid[y][x] > maxNutrients) {
+                maxNutrients = nutrientGrid[y][x];
+                bestPos = new Position(x, y);
+              }
+            }
+          }
+
+          if (bestPos != null) {
+            Position nextPos = getNextPositionTowards(spore.position(), bestPos);
+            actions.add(new SporeMoveToAction(spore.id(), nextPos));
+          } else {
+            // Fallback random si tout est à nous
+            actions.add(
+                    new SporeMoveToAction(
+                            spore.id(),
+                            new Position(
+                                    random.nextInt(gameMessage.world().map().width()),
+                                    random.nextInt(gameMessage.world().map().height()))));
+          }
         }
       }
     }
@@ -219,14 +282,11 @@ public class Bot {
   }
 
 
-  public List<Action> charge(List<TeamInfo> ennemies, TeamInfo myTeam, TeamGameState gameMessage){
-    //attaque spore, quelle spore est nearest et attackable post deplacemenet
+  public List<Action> charge(Tile[][]map, List<TeamInfo> ennemies, TeamInfo myTeam, TeamGameState gameMessage){
     List<Action> actions = new ArrayList<>();
-    //Position cible;  si je return, func name est charge tho so
+    boolean canAttack = false;
 
-    boolean canAttack= false;
     for (Spore mySpore : myTeam.spores()) {
-      // Une spore avec 1 biomasse ne peut pas bouger
       if (mySpore.biomass() <= 1) {
         continue;
       }
@@ -246,9 +306,33 @@ public class Bot {
       }
 
       if(nearestEnemy != null){
-        Position nextPos = getNextPositionTowards(mySpore.position(), nearestEnemy.position());
-        int biomassLost = calculateBiomassLost(mySpore.position(), nextPos, myTeam,gameMessage);
-        int myBiomassAfterMove= mySpore.biomass() - biomassLost;
+        Position nextPos = null;
+        int myBiomassAfterMove = mySpore.biomass() - 10;
+
+        try {
+          if (myBiomassAfterMove > nearestEnemy.biomass()) {
+            Path path = TilePathfinder.findShortestPath(map, getTile(mySpore.position()), getTile(nearestEnemy.position()), myTeam.teamId());
+            if (path != null && path.path() != null && !path.path().isEmpty()) {
+              path.path().poll();
+
+              if (!path.path().isEmpty()) {
+                Tile nextTile = path.path().poll();
+                if (nextTile != null) {
+                  nextPos = nextTile.getPosition();
+                }
+              }
+            }
+          }
+        }catch (Exception e){
+          System.out.println("Pathfinding failed, using simple movement");
+          nextPos = null;
+        }
+
+        if (nextPos == null) {
+          nextPos = getNextPositionTowards(mySpore.position(), nearestEnemy.position());
+          int biomassLost = calculateBiomassLost(mySpore.position(), nextPos, myTeam, gameMessage);
+          myBiomassAfterMove = mySpore.biomass() - biomassLost;
+        }
 
         if(myBiomassAfterMove > nearestEnemy.biomass()){
           actions.add(new SporeMoveToAction(mySpore.id(), nextPos));
@@ -257,55 +341,58 @@ public class Bot {
       }
     }
 
-
-
-    if(!canAttack && !myTeam.spawners().isEmpty()){ //&& weakestEnemyBiomass!=Integer.MAX_VALUE){
-      //moved here because lol why would I need it to be elsewhere
+    if(!canAttack && !myTeam.spawners().isEmpty()){
       int weakestEnemyBiomass = Integer.MAX_VALUE;
-      Spore weakestEnnemy = null;
-
+      Spore weakestEnemy = null;
 
       for (TeamInfo ennemy : ennemies) {
         for (Spore enemySpore : ennemy.spores()) {
           if (enemySpore.biomass() < weakestEnemyBiomass) {
             weakestEnemyBiomass = enemySpore.biomass();
-            weakestEnnemy = enemySpore;
+            weakestEnemy = enemySpore;
           }
         }
       }
-      if(weakestEnemyBiomass != Integer.MAX_VALUE && weakestEnnemy!= null) {
+
+      if(weakestEnemyBiomass != Integer.MAX_VALUE && weakestEnemy != null) {
         int availableNutrients = myTeam.nutrients();
-        // NE SPAWNER QUE SI on a beaucoup de nutrients OU si urgent
-        // Économiser 200 nutrients pour un gros spawn plus tard
-        int minNutrientsToSpawn = 250; // On spawn seulement si on a 250+ ou tick 220 en bas
 
-        if (availableNutrients >= minNutrientsToSpawn || gameMessage.tick() >=220) {
-          int targetBiomass = weakestEnemyBiomass + 5;
+        // MONSTER MODE: Si >= 1300 nutrients, spawn des monstres de 300!
+        if (availableNutrients >= 1300) {
+          int monsterBiomass = 300;
 
-          if(availableNutrients > targetBiomass * 2) {
-            targetBiomass = Math.min(availableNutrients / 2, weakestEnemyBiomass + 15);
-          }
-
-          if(availableNutrients >= targetBiomass && targetBiomass > 0){
-            Spawner bestSpawner = findClosestSpawner(myTeam, weakestEnnemy.position());
-
-            if(bestSpawner != null){
-              actions.add(new SpawnerProduceSporeAction(
-                      bestSpawner.id() ,
-                      targetBiomass
-              ));
-            }else{
-              actions.add(new SpawnerProduceSporeAction(
-                      myTeam.spawners().getFirst().id(),
-                      targetBiomass
-              ));
+          for (Spawner spawner : myTeam.spawners()) {
+            if (availableNutrients >= monsterBiomass) {
+              actions.add(new SpawnerProduceSporeAction(spawner.id(), monsterBiomass));
+              availableNutrients -= monsterBiomass;
+              System.out.println("🔥 MONSTER SPAWN! biomass=" + monsterBiomass + " from spawner " + spawner.id());
             }
-            System.out.println("Spawning spore: biomass=" + targetBiomass +
-                    ", nutrients left=" + (availableNutrients - targetBiomass));
           }
-        } else {
-          System.out.println("SAVING nutrients! Current=" + availableNutrients +
-                  ", need " + minNutrientsToSpawn + " to spawn");
+        }
+        // Logique normale
+        else {
+          int minNutrientsToSpawn = 250;
+
+          if (availableNutrients >= minNutrientsToSpawn || gameMessage.tick() >= 220) {
+            int targetBiomass = weakestEnemyBiomass + 5;
+
+            if(availableNutrients > targetBiomass * 2) {
+              targetBiomass = Math.min(availableNutrients / 2, weakestEnemyBiomass + 15);
+            }
+
+            if(availableNutrients >= targetBiomass && targetBiomass > 0){
+              Spawner bestSpawner = findClosestSpawner(myTeam, weakestEnemy.position());
+
+              if(bestSpawner != null){
+                actions.add(new SpawnerProduceSporeAction(bestSpawner.id(), targetBiomass));
+              } else {
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), targetBiomass));
+              }
+              System.out.println("Spawning spore: biomass=" + targetBiomass + ", nutrients left=" + (availableNutrients - targetBiomass));
+            }
+          } else {
+            System.out.println("SAVING nutrients! Current=" + availableNutrients + ", need " + minNutrientsToSpawn + " to spawn");
+          }
         }
       }
     }

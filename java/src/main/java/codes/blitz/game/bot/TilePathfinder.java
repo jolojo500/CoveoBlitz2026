@@ -110,10 +110,9 @@ public class TilePathfinder {
         
         // Step 2: Transfer all elements from stack back to queue
         Queue<Tile> reversedQueue = new LinkedList<>();
-        System.out.println("deleted : " + stack.pop().getPosition());
         while (!stack.isEmpty()) {
             Tile t = stack.pop();
-            System.out.println(t.getPosition());
+//            System.out.println(t.getPosition());
             reversedQueue.offer(t);
         }
         
